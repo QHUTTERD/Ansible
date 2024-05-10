@@ -1,0 +1,75 @@
+---
+- name: Install Docker and Docker Compose
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install prerequisites
+      become: yes
+      package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - software-properties-common
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Add Docker GPG key
+      become: yes
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Add Docker repository
+      become: yes
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        state: present
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Install Docker
+      become: yes
+      package:
+        name: docker-ce
+        state: present
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Install Docker Compose
+      become: yes
+      pip:
+        name: docker-compose
+        state: present
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Install prerequisites
+      become: yes
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - yum-utils
+        - device-mapper-persistent-data
+        - lvm2
+      when: ansible_pkg_mgr == 'yum'
+
+    - name: Add Docker repository
+      become: yes
+      shell: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      when: ansible_pkg_mgr == 'yum'
+
+    - name: Install Docker
+      become: yes
+      package:
+        name: docker-ce
+        state: present
+      when: ansible_pkg_mgr == 'yum'
+
+    - name: Install Docker Compose
+      become: yes
+      pip:
+        name: docker-compose
+        state: present
+      when: ansible_pkg_mgr == 'yum'
