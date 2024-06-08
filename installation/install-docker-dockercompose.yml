@@ -3,8 +3,7 @@
   hosts: all
   become: yes
   tasks:
-    - name: Install prerequisites
-      become: yes
+    - name: Install prerequisites (Debian/Ubuntu)
       package:
         name: "{{ item }}"
         state: present
@@ -16,36 +15,36 @@
         - software-properties-common
       when: ansible_pkg_mgr == 'apt'
 
-    - name: Add Docker GPG key
-      become: yes
+    - name: Add Docker GPG key (Debian/Ubuntu)
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
       when: ansible_pkg_mgr == 'apt'
 
-    - name: Add Docker repository
-      become: yes
+    - name: Add Docker repository (Debian/Ubuntu)
       apt_repository:
         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
         state: present
       when: ansible_pkg_mgr == 'apt'
 
-    - name: Install Docker
-      become: yes
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Install Docker (Debian/Ubuntu)
       package:
         name: docker-ce
         state: present
       when: ansible_pkg_mgr == 'apt'
 
-    - name: Install Docker Compose
-      become: yes
+    - name: Install Docker Compose (Debian/Ubuntu)
       pip:
         name: docker-compose
         state: present
       when: ansible_pkg_mgr == 'apt'
 
-    - name: Install prerequisites
-      become: yes
+    - name: Install prerequisites (CentOS/RedHat)
       yum:
         name: "{{ item }}"
         state: present
@@ -55,20 +54,17 @@
         - lvm2
       when: ansible_pkg_mgr == 'yum'
 
-    - name: Add Docker repository
-      become: yes
+    - name: Add Docker repository (CentOS/RedHat)
       shell: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
       when: ansible_pkg_mgr == 'yum'
 
-    - name: Install Docker
-      become: yes
+    - name: Install Docker (CentOS/RedHat)
       package:
         name: docker-ce
         state: present
       when: ansible_pkg_mgr == 'yum'
 
-    - name: Install Docker Compose
-      become: yes
+    - name: Install Docker Compose (CentOS/RedHat)
       pip:
         name: docker-compose
         state: present
