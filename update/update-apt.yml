@@ -1,5 +1,5 @@
 ---
-- name: Update and upgrade apt packages
+- name: Update and upgrade packages on various Linux distributions
   hosts: all
   become: true
   tasks:
@@ -8,20 +8,37 @@
       ansible.builtin.apt:
         update_cache: true
 
-    - name: Update packages with yum
-      when: ansible_pkg_mgr == 'yum'
-      ansible.builtin.yum:
-        name: '*'
-        state: latest # noqa: package-latest
-
     - name: Upgrade packages with apt
       when: ansible_pkg_mgr == 'apt'
       ansible.builtin.apt:
         upgrade: dist
 
+    - name: Update packages with yum
+      when: ansible_pkg_mgr == 'yum'
+      ansible.builtin.yum:
+        name: '*'
+        state: latest
+
     - name: Upgrade packages with yum
       when: ansible_pkg_mgr == 'yum'
       ansible.builtin.yum:
         name: '*'
-        state: latest # noqa: package-latest
+        state: latest
         exclude: kernel*
+
+    - name: Update the package index on Alpine Linux
+      when: ansible_pkg_mgr == 'apk'
+      ansible.builtin.command:
+        cmd: apk update
+      changed_when: false
+
+    - name: Upgrade all packages on Alpine Linux
+      when: ansible_pkg_mgr == 'apk'
+      ansible.builtin.command:
+        cmd: apk upgrade --available
+      register: alpine_upgrade_result
+
+    - name: Reboot Alpine Linux server if needed
+      when: ansible_pkg_mgr == 'apk' and alpine_upgrade_result.changed
+      ansible.builtin.reboot:
+        msg: "Rebooting the server after package upgrade"
