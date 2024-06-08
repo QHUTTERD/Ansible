@@ -13,6 +13,7 @@
         - curl
         - gnupg-agent
         - software-properties-common
+        - python3-pip
       when: ansible_pkg_mgr == 'apt'
 
     - name: Add Docker GPG key (Debian/Ubuntu)
@@ -42,6 +43,7 @@
       pip:
         name: docker-compose
         state: present
+        executable: pip3
       when: ansible_pkg_mgr == 'apt'
 
     - name: Install prerequisites (CentOS/RedHat)
@@ -52,6 +54,7 @@
         - yum-utils
         - device-mapper-persistent-data
         - lvm2
+        - python3-pip
       when: ansible_pkg_mgr == 'yum'
 
     - name: Add Docker repository (CentOS/RedHat)
@@ -68,4 +71,5 @@
       pip:
         name: docker-compose
         state: present
+        executable: pip3
       when: ansible_pkg_mgr == 'yum'
