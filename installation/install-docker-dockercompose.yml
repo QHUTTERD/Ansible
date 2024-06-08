@@ -1,87 +1,65 @@
 ---
-- name: Install Docker and Docker Compose
-  hosts: all
+- hosts: all
   become: yes
+  vars:
+    docker_compose_version: "1.27.4"
   tasks:
-    - name: Install prerequisites (Debian/Ubuntu)
-      package:
-        name: "{{ item }}"
+
+    - name: Update apt cache
+      apt: update_cache=yes cache_valid_time=3600
+
+    - name: Upgrade all apt packages
+      apt: upgrade=dist
+
+    - name: Install dependencies
+      apt:
+        name: "{{ packages }}"
         state: present
-      loop:
+        update_cache: yes
+      vars:
+        packages:
         - apt-transport-https
         - ca-certificates
         - curl
-        - gnupg-agent
         - software-properties-common
-      when: ansible_pkg_mgr == 'apt'
-
-    - name: Install pip3 (Debian/Ubuntu)
-      package:
-        name: python3-pip
-        state: present
-      when: ansible_pkg_mgr == 'apt'
-
-    - name: Verify pip3 installation (Debian/Ubuntu)
-      command: which pip3
-      register: pip3_path
-      failed_when: pip3_path.rc != 0
-      when: ansible_pkg_mgr == 'apt'
-
-    - name: Add Docker GPG key (Debian/Ubuntu)
+        - gnupg-agent
+      
+    - name: Add an apt signing key for Docker
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
-      when: ansible_pkg_mgr == 'apt'
 
-    - name: Add Docker repository (Debian/Ubuntu)
+    - name: Add apt repository for stable version
       apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
         state: present
-      when: ansible_pkg_mgr == 'apt'
 
-    - name: Update apt cache
+    - name: Install Docker
       apt:
+        name: "{{ packages }}"
+        state: present
         update_cache: yes
-      when: ansible_pkg_mgr == 'apt'
+      vars:
+        packages:
+        - docker-ce
+        - docker-ce-cli 
+        - containerd.io
 
-    - name: Install Docker (Debian/Ubuntu)
-      package:
-        name: docker-ce
-        state: present
-      when: ansible_pkg_mgr == 'apt'
+    - name: Add user to docker group
+      user:
+        name: "{{ansible_user}}"
+        group: docker
 
-    - name: Ensure python3-pip is installed (Debian/Ubuntu)
-      package:
-        name: python3-pip
-        state: present
-      when: ansible_pkg_mgr == 'apt' and pip3_path.rc != 0
+    - name: Download docker-compose {{ docker_compose_version }}
+      get_url:
+        url : https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
+        dest: ~/docker-compose
+        mode: '+x'
 
-    - name: Install Docker Compose (Debian/Ubuntu)
-      pip:
-        name: docker-compose
-        state: present
-        executable: pip3
-      when: ansible_pkg_mgr == 'apt' and pip3_path.rc == 0
+    - name: Check docker-compose exists
+      stat: path=~/docker-compose
+      register: docker_compose
 
-    - name: Install prerequisites (CentOS/RedHat)
-      yum:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - yum-utils
-        - device-mapper-persistent-data
-        - lvm2
-        - python3
-      when: ansible_pkg_mgr == 'yum'
-
-    - name: Verify pip3 installation (CentOS/RedHat)
-      command: which pip3
-      register: pip3_path
-      failed_when: pip3_path.rc != 0
-      when: ansible_pkg_mgr == 'yum'
-
-    - name: Ensure python3-pip is installed (CentOS/RedHat)
-      package:
-        name: python3-pip
-        state: present
-      when: ansible_pkg_mgr == 'yum' and pip3_path.rc != 0
+    - name: Move docker-compose to /usr/local/bin/docker-compose
+      command: mv ~/docker-compose /usr/local/bin/docker-compose
+      when: docker_compose.stat.exists
