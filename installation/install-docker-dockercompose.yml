@@ -21,6 +21,12 @@
         state: present
       when: ansible_pkg_mgr == 'apt'
 
+    - name: Verify pip3 installation (Debian/Ubuntu)
+      command: which pip3
+      register: pip3_path
+      failed_when: pip3_path.rc != 0
+      when: ansible_pkg_mgr == 'apt'
+
     - name: Add Docker GPG key (Debian/Ubuntu)
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
@@ -49,7 +55,7 @@
         name: docker-compose
         state: present
         executable: pip3
-      when: ansible_pkg_mgr == 'apt'
+      when: ansible_pkg_mgr == 'apt' and pip3_path.rc == 0
 
     - name: Install prerequisites (CentOS/RedHat)
       yum:
@@ -61,6 +67,12 @@
         - lvm2
         - python3
         - python3-pip
+      when: ansible_pkg_mgr == 'yum'
+
+    - name: Verify pip3 installation (CentOS/RedHat)
+      command: which pip3
+      register: pip3_path
+      failed_when: pip3_path.rc != 0
       when: ansible_pkg_mgr == 'yum'
 
     - name: Add Docker repository (CentOS/RedHat)
@@ -78,4 +90,4 @@
         name: docker-compose
         state: present
         executable: pip3
-      when: ansible_pkg_mgr == 'yum'
+      when: ansible_pkg_mgr == 'yum' and pip3_path.rc == 0
