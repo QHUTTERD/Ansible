@@ -1,6 +1,6 @@
 ---
 - name: Gather comprehensive information from Linux servers
-  hosts: servers
+  hosts: all
   become: yes
   tasks:
     - name: Gather all facts
