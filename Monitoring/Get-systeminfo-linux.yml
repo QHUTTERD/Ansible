@@ -1,0 +1,67 @@
+---
+- name: Gather comprehensive information from Linux servers
+  hosts: servers
+  become: yes
+  tasks:
+    - name: Gather all facts
+      setup:
+
+    - name: Get list of installed packages (Debian/Ubuntu)
+      shell: dpkg-query -l
+      register: dpkg_packages
+      when: ansible_facts['ansible_os_family'] == 'Debian'
+
+    - name: Get list of installed packages (Red Hat/CentOS)
+      shell: rpm -qa
+      register: rpm_packages
+      when: ansible_facts['ansible_os_family'] == 'RedHat'
+
+    - name: Save system information to file
+      copy:
+        content: |
+          System Information:
+          -------------------
+          Hostname: {{ ansible_facts['ansible_hostname'] }}
+          OS: {{ ansible_facts['ansible_distribution'] }} {{ ansible_facts['ansible_distribution_version'] }}
+          Kernel: {{ ansible_facts['ansible_kernel'] }}
+          Architecture: {{ ansible_facts['ansible_architecture'] }}
+          Processor: {{ ansible_facts['ansible_processor'][0] }}
+          Processor Cores: {{ ansible_facts['ansible_processor_cores'] }}
+          Processor Threads: {{ ansible_facts['ansible_processor_threads_per_core'] * ansible_facts['ansible_processor_cores'] }}
+          Memory: {{ ansible_facts['ansible_memtotal_mb'] }} MB
+          Free Memory: {{ ansible_facts['ansible_memfree_mb'] }} MB
+          Available Memory: {{ ansible_facts['ansible_memavailable_mb'] }} MB
+          Swap: {{ ansible_facts['ansible_swaptotal_mb'] }} MB
+          Free Swap: {{ ansible_facts['ansible_swapfree_mb'] }} MB
+          Disk:
+          {% for device, details in ansible_facts['ansible_devices'].items() %}
+            {{ device }}: {{ details['size'] }}
+          {% endfor %}
+          Filesystem:
+          {% for fs in ansible_facts['ansible_mounts'] %}
+            Mount: {{ fs['mount'] }}
+            Device: {{ fs['device'] }}
+            Fstype: {{ fs['fstype'] }}
+            Size: {{ fs['size_total'] // 1024 // 1024 }} MB
+            Used: {{ fs['size_used'] // 1024 // 1024 }} MB
+            Available: {{ fs['size_available'] // 1024 // 1024 }} MB
+          {% endfor %}
+          Network Interfaces:
+          {% for iface in ansible_facts['ansible_interfaces'] %}
+            {{ iface }}:
+              MAC: {{ ansible_facts['ansible_' + iface]['macaddress'] }}
+              IPv4: {{ ansible_facts['ansible_' + iface]['ipv4']['address'] if ansible_facts['ansible_' + iface]['ipv4'] is defined else 'N/A' }}
+              IPv6: {{ ansible_facts['ansible_' + iface]['ipv6'][0]['address'] if ansible_facts['ansible_' + iface]['ipv6'] is defined else 'N/A' }}
+              MTU: {{ ansible_facts['ansible_' + iface]['mtu'] }}
+          {% endfor %}
+          Uptime: {{ ansible_facts['ansible_uptime_seconds'] | int | round(2) }} seconds
+          Boot Time: {{ ansible_facts['ansible_date_time']['iso8601'] }}
+          Installed Packages:
+          {% if ansible_facts['ansible_os_family'] == 'Debian' %}
+            {{ dpkg_packages.stdout }}
+          {% elif ansible_facts['ansible_os_family'] == 'RedHat' %}
+            {{ rpm_packages.stdout }}
+          {% else %}
+            N/A
+          {% endif %}
+        dest: /tmp/outputs/system_info.txt
