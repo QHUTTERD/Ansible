@@ -30,7 +30,7 @@
           Processor Threads: {{ ansible_facts['processor_threads_per_core'] * ansible_facts['processor_cores'] }}
           Memory: {{ ansible_facts['memtotal_mb'] }} MB
           Free Memory: {{ ansible_facts['memfree_mb'] }} MB
-          Available Memory: {{ ansible_facts['memavailable_mb'] }} MB
+          Available Memory: {{ ansible_facts['memavailable_mb'] | default('N/A') }} MB
           Swap: {{ ansible_facts['swaptotal_mb'] }} MB
           Free Swap: {{ ansible_facts['swapfree_mb'] }} MB
           Disk:
