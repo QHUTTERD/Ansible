@@ -1,0 +1,130 @@
+---
+- hosts: domain-join
+  become: yes
+  vars:
+    domain_name: "yourdomain.com"
+    domain_admin_user: "Administrator"
+    domain_admin_password: "P@ssw0rd"
+    computer_ou: "OU"
+    new_hostname: "new-server-name"  # Vervang dit door de gewenste hostname
+    primary_dns: "10.7.7.50"  # Vervang dit door het IP-adres van je primaire DNS-server
+    secondary_dns: "10.7.7.51"  # Vervang dit door het IP-adres van je secundaire DNS-server
+    activedirectory_admin_group: "homelab_administrators"  # Naam van de AD groep
+
+  tasks:
+    - name: Update and install required packages
+      apt:
+        name:
+          - realmd
+          - sssd
+          - adcli
+          - packagekit
+          - krb5-user
+          - samba-common-bin
+          - samba-libs
+          - ntp
+        state: present
+        update_cache: yes
+
+    - name: Set the hostname
+      hostname:
+        name: "{{ new_hostname }}"
+
+    - name: Ensure that the hostname is in /etc/hostname
+      lineinfile:
+        path: /etc/hostname
+        line: "{{ new_hostname }}"
+        create: yes
+
+    - name: Ensure that the hostname is in /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        regexp: "^127\\.0\\.1\\.1\\s+"
+        line: "127.0.1.1 {{ new_hostname }}"
+        create: yes
+
+    - name: Disable and stop systemd-resolved
+      systemd:
+        name: systemd-resolved
+        enabled: no
+        state: stopped
+
+    - name: Remove the symlink to /etc/resolv.conf created by systemd-resolved
+      file:
+        path: /etc/resolv.conf
+        state: absent
+
+    - name: Create new /etc/resolv.conf file with custom DNS servers
+      copy:
+        content: |
+          nameserver {{ primary_dns }}
+          nameserver {{ secondary_dns }}
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Discover the domain
+      command: realm discover {{ domain_name }}
+      register: realm_discovery
+
+    - name: Join the domain
+      command: >
+        realm join {{ domain_name }}
+        --user={{ domain_admin_user }}
+        --computer-ou={{ computer_ou }}
+      args:
+        stdin: "{{ domain_admin_password }}"
+      when: "'no valid configuration found' not in realm_discovery.stdout"
+
+    - name: Configure SSSD to use the domain
+      lineinfile:
+        path: /etc/sssd/sssd.conf
+        regexp: '^\\[sssd\\]'
+        line: |
+          [sssd]
+          domains = {{ domain_name }}
+          config_file_version = 2
+          services = nss, pam
+
+          [domain/{{ domain_name }}]
+          ad_domain = {{ domain_name }}
+          krb5_realm = {{ domain_name | upper }}
+          realmd_tags = manages-system joined-with-adcli
+          cache_credentials = True
+          id_provider = ad
+          fallback_homedir = /home/%u@%d
+          access_provider = simple
+        create: yes
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Restart SSSD
+      service:
+        name: sssd
+        state: restarted
+
+    - name: Allow domain users to log in
+      command: realm permit --all
+
+    - name: Update PAM to create home directories on login
+      pamd:
+        name: common-session
+        type: session
+        control: required
+        module_path: pam_mkhomedir.so
+        state: present
+        arguments: "skel=/etc/skel/ umask=0077"
+
+    - name: Add homelab_administrators group to local Administrators group
+      win_group_membership:
+        name: Administrators
+        members: "{{ domain_name }}\\{{ activedirectory_admin_group }}"
+        state: present
+
+    - name: Reboot the server to apply all changes
+      reboot:
+        msg: "Reboot initiated by Ansible to complete hostname change and AD join"
+        connect_timeout: 5
+        reboot_timeout: 600
