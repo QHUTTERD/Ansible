@@ -6,9 +6,8 @@
     timezone: "Europe/Amsterdam"
 
   tasks:
-    - name: Set the hostname
-      hostname:
-        name: "{{ hostname }}"
+    - name: Set the hostname using command module
+      command: hostnamectl set-hostname "{{ hostname }}"
 
     - name: Configure static IP address
       copy:
