@@ -1,14 +1,9 @@
 ---
-- name: Configure VM with Semaphore
-  hosts: all
+- name: Configure single VM
+  hosts: cloudinit
   become: true
   vars:
-    static_ip: "{{ static_ip }}"
-    gateway: "{{ gateway }}"
-    dns_servers: "{{ dns_servers }}"
-    hostname: "{{ hostname }}"
     timezone: "Europe/Amsterdam"
-    interface_name: "{{ interface_name }}"  # Zorg ervoor dat deze variabele correct wordt ingesteld
 
   tasks:
     - name: Set the hostname
@@ -82,3 +77,16 @@
         pre_reboot_delay: 0
         post_reboot_delay: 30
         test_command: whoami
+
+
+#static config file:
+#[cloudinit]
+#192.168.1.100 ansible_user=your_ssh_user
+
+#[cloudinit:vars]
+#ansible_become=true
+#static_ip=192.168.1.100/24
+#gateway=192.168.1.1
+#dns_servers='["8.8.8.8", "8.8.4.4"]'
+#hostname=my-vm-hostname
+#interface_name=eth0
