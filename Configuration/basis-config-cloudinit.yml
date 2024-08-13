@@ -7,7 +7,7 @@
   tasks:
     - name: Configure static IP address
       copy:
-        dest: /etc/netplan/01-netcfg.yaml
+        dest: /etc/netplan/50-cloud-init.yaml
         content: |
           network:
             version: 2
