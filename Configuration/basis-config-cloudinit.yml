@@ -1,16 +1,14 @@
 ---
-- name: basis-config-cloudinit
+- name: Configure VM with Semaphore
   hosts: all
   become: true
-#  vars:
-#    static_ip: "192.168.1.100/24"
-#    gateway: "192.168.1.1"
-#    dns_servers:
-#      - "8.8.8.8"
-#      - "8.8.4.4"
-#    hostname: "my-vm-hostname"
-#    timezone: "Europe/Amsterdam"
-#    interface_name: "eth0"  # Pas dit aan naar de juiste interface naam
+  vars:
+    static_ip: "{{ static_ip }}"
+    gateway: "{{ gateway }}"
+    dns_servers: "{{ dns_servers }}"
+    hostname: "{{ hostname }}"
+    timezone: "Europe/Amsterdam"
+    interface_name: "{{ interface_name }}"  # Zorg ervoor dat deze variabele correct wordt ingesteld
 
   tasks:
     - name: Set the hostname
