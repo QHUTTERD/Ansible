@@ -5,6 +5,7 @@
     timezone: "Europe/Amsterdam"
 
   tasks:
+    become: true
     - name: Configure static IP address
       copy:
         dest: /etc/netplan/50-cloud-init.yaml
